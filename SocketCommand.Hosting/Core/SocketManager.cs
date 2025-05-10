@@ -21,6 +21,8 @@ public sealed class SocketManager : ISocketManager, IDisposable
     private readonly ISocketMessageCompressor? compressor;
     private readonly ISocketMessasgeEncryption? encryptor;
     private IEnumerable<Command> handlers;
+    private IList<Command> synchronousHandlers = [];
+    private ManualResetEventSlim syncSemaphore = new();
 
 
     public SocketManager(TcpClient socket, IServiceProvider serviceProvider, int bufferSize = 1024)
@@ -62,9 +64,42 @@ public sealed class SocketManager : ISocketManager, IDisposable
         catch { }
     }
 
-    public Task<TRes> Send<TReq, TRes>(string command, TReq data)
+    public async Task<TRes> Send<TReq, TRes>(string command, TReq data)
     {
-        throw new NotImplementedException();
+        try
+        {
+            TRes result = default;
+            synchronousHandlers.Add(new Command()
+            {
+                Name = command,
+                Handler = (TRes r) =>
+                {
+                    result = r;
+                    syncSemaphore.Set();
+                },
+            });
+
+
+            await Send(command, data);
+            syncSemaphore.Wait(5000);
+
+            return result;
+        }
+        catch
+        {
+            return default;
+        }
+        finally
+        {
+            try
+            {
+                synchronousHandlers.Remove(synchronousHandlers.Last());
+            }
+            finally
+            {
+                syncSemaphore.Set();
+            }
+        }
     }
 
     public async Task<byte[]?> ReceiveAsync(CancellationToken cancellationToken)
@@ -134,7 +169,8 @@ public sealed class SocketManager : ISocketManager, IDisposable
         var commandName = Encoding.ASCII.GetString(header).TrimEnd('\0');
         data = data.Skip(8).ToArray();
 
-        var handler = handlers.FirstOrDefault(x => x.Name == commandName);
+        var handler = synchronousHandlers.FirstOrDefault(x => x.Name == commandName);
+        handler ??= handlers.FirstOrDefault(x => x.Name == commandName);
         if (handler != null)
         {
             var actionType = handler.Handler.GetType();
@@ -146,15 +182,27 @@ public sealed class SocketManager : ISocketManager, IDisposable
             {
                 try
                 {
-                    if (handler.Caster == null)
+                    if (p.ParameterType.IsAssignableTo(parameters.GetType()))
                     {
-                        handler.Caster = CreateCaster(p.ParameterType);
-                    }
+                        if (handler.Caster == null)
+                        {
+                            handler.Caster = CreateCaster(p.ParameterType);
+                        }
 
-                    var casted = handler.Caster(parameters);
-                    arguments.Add(casted);
+                        var casted = handler.Caster(parameters);
+                        arguments.Add(casted);
+                    }
                 }
-                catch { arguments.Add(serviceProvider.GetService(p.ParameterType)); }
+                catch 
+                {
+                    arguments.Add(serviceProvider.GetService(p.ParameterType));
+                }
+
+                if (p.ParameterType.IsAssignableTo(typeof(ISocketManager)))
+                {
+                    var source = new SocketManager(socket, serviceProvider, bufferSize);
+                    arguments.Add(source);
+                }
             }
 
             invoke.Invoke(handler.Handler, arguments.ToArray());
