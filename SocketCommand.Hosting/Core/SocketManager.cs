@@ -9,6 +9,8 @@ namespace SocketCommand.Hosting.Core;
 
 public sealed class SocketManager : ISocketManager, IDisposable
 {
+    private static byte[] BOM = [0xEF, 0xBB, 0xBF];
+
     private readonly TcpClient socket;
     private readonly NetworkStream stream;
     private readonly StreamReader reader;
@@ -17,19 +19,21 @@ public sealed class SocketManager : ISocketManager, IDisposable
     private readonly IServiceProvider serviceProvider;
     private readonly ISocketMessageSerializer serializer;
     private readonly ISocketMessageCompressor? compressor;
+    private readonly ISocketMessasgeEncryption? encryptor;
     private IEnumerable<Command> handlers;
 
 
     public SocketManager(TcpClient socket, IServiceProvider serviceProvider, int bufferSize = 1024)
     {
         this.socket = socket;
-        //this.stream = socket.GetStream();
-        //this.reader = new StreamReader(stream, Encoding.UTF8);
-        //this.writer = new StreamWriter(stream, Encoding.UTF8) { AutoFlush = true };
+        this.stream = socket.GetStream();
+        this.reader = new StreamReader(stream, Encoding.UTF8);
+        this.writer = new StreamWriter(stream, Encoding.UTF8) { AutoFlush = true };
         this.bufferSize = bufferSize;
         this.serviceProvider = serviceProvider;
         this.serializer = serviceProvider.GetRequiredService<ISocketMessageSerializer>();
         this.compressor = serviceProvider.GetService<ISocketMessageCompressor>();
+        this.encryptor = serviceProvider.GetService<ISocketMessasgeEncryption>();
         this.handlers = serviceProvider.GetServices<Command>();
     }
 
@@ -46,6 +50,11 @@ public sealed class SocketManager : ISocketManager, IDisposable
             if (compressor != null)
             {
                 serializedData = compressor.Compress(serializedData);
+            }
+
+            if (encryptor != null)
+            {
+                serializedData = await encryptor.Encrypt(serializedData);
             }
 
             await stream.WriteAsync(serializedData, 0, serializedData.Length);
@@ -89,6 +98,14 @@ public sealed class SocketManager : ISocketManager, IDisposable
                 if (data == null)
                 {
                     break;
+                }
+
+                if (data.SequenceEqual(BOM))
+                    continue;
+
+                if (encryptor != null)
+                {
+                    data = await encryptor.Decrypt(data);
                 }
 
                 if (compressor != null)

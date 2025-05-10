@@ -7,7 +7,7 @@ namespace SocketCommand.Hosting.Core
     {
         private SocketHost socketHost;
 
-        internal ConnectionManager(SocketHost socketHost)
+        public ConnectionManager(SocketHost socketHost)
         {
             this.socketHost = socketHost;
         }

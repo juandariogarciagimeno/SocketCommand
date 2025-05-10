@@ -12,6 +12,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SocketCommand.Console", "So
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SocketCommand.Compression.7Zip", "SocketCommand.Compression.7Zip\SocketCommand.Compression.7Zip.csproj", "{CF60A64F-598A-48B9-91B2-D2527F13AC00}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SocketCommand.Console2", "SocketCommand.Console2\SocketCommand.Console2.csproj", "{1A432AE3-9F0C-4822-82D6-E0B94DB8B6B7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -34,12 +36,17 @@ Global
 		{CF60A64F-598A-48B9-91B2-D2527F13AC00}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CF60A64F-598A-48B9-91B2-D2527F13AC00}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CF60A64F-598A-48B9-91B2-D2527F13AC00}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1A432AE3-9F0C-4822-82D6-E0B94DB8B6B7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1A432AE3-9F0C-4822-82D6-E0B94DB8B6B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1A432AE3-9F0C-4822-82D6-E0B94DB8B6B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1A432AE3-9F0C-4822-82D6-E0B94DB8B6B7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{DBC27D69-A6B7-46FA-85A2-9CA1FB115AFC} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{1A432AE3-9F0C-4822-82D6-E0B94DB8B6B7} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE38F955-E6EA-46D2-8D14-621104090346}

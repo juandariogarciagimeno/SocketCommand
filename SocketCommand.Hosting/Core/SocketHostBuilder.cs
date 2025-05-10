@@ -68,4 +68,15 @@ public sealed class SocketHostBuilder
         return this;
     }
 
+    public SocketHostBuilder WithEncryption<TEncryptor>() where TEncryptor : class, ISocketMessasgeEncryption
+    {
+        serviceCollection.AddSingleton<ISocketMessasgeEncryption, TEncryptor>();
+        return this;
+    }
+
+    public SocketHostBuilder WithAESEncryption()
+    {
+        return WithEncryption<DefaultSocketMessageAESEncryption>();
+    }
+
 }
