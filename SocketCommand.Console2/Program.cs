@@ -19,7 +19,7 @@ var connectionManager = host.Services.GetRequiredService<IConnectionManager>();
 var socketManager = await connectionManager.ConnectTo("127.0.0.1", 5001);
 
 var testObj = new TestObject() { Id = 3, Name = "Manolo" };
-await socketManager.Send("test");
+var res = await socketManager.Send<TestObject>("test");
 
 await host.WaitForShutdownAsync();
 

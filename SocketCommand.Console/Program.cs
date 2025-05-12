@@ -11,6 +11,8 @@ builder
     .WithCommand("test", async (ISocketManager caller) =>
     {
         Console.WriteLine("test");
+        var testObj = new TestObject() { Id = 3, Name = "Manolo" };
+        await caller.Send("test", testObj);
     });
 
 var host = builder.Build();

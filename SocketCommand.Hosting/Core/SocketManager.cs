@@ -4,6 +4,7 @@ using SocketCommand.Abstractions.Interfaces;
 using System.Linq.Expressions;
 using System.Net.Sockets;
 using System.Text;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace SocketCommand.Hosting.Core;
 
@@ -23,7 +24,6 @@ public sealed class SocketManager : ISocketManager, IDisposable
     private IEnumerable<Command> handlers;
     private IList<Command> synchronousHandlers = [];
     private ManualResetEventSlim syncSemaphore = new();
-
 
     public SocketManager(TcpClient socket, IServiceProvider serviceProvider, int bufferSize = 1024)
     {
@@ -83,6 +83,46 @@ public sealed class SocketManager : ISocketManager, IDisposable
         await stream.WriteAsync(serializedData, 0, serializedData.Length);
     }
 
+    public async Task<TRes> Send<TRes>(string command)
+    {
+        
+        syncSemaphore.Reset();
+        try
+        {
+            TRes result = default;
+            synchronousHandlers.Add(new Command()
+            {
+                Name = command,
+                Handler = (TRes r) =>
+                {
+                    result = r;
+                    syncSemaphore.Set();
+                },
+            });
+
+
+            await Send(command);
+            syncSemaphore.Wait(5000);
+
+            return result;
+        }
+        catch
+        {
+            return default;
+        }
+        finally
+        {
+            try
+            {
+                synchronousHandlers.Remove(synchronousHandlers.Last());
+            }
+            finally
+            {
+                syncSemaphore.Set();
+            }
+        }
+    }
+
     public async Task<TRes> Send<TReq, TRes>(string command, TReq data)
     {
         try
@@ -121,7 +161,7 @@ public sealed class SocketManager : ISocketManager, IDisposable
         }
     }
 
-    public async Task<byte[]?> ReceiveAsync(CancellationToken cancellationToken)
+    public async Task<byte[]?> ReceiveAsync(CancellationToken cancellationToken = default)
     {
         try
         {
