@@ -8,12 +8,9 @@ builder
     .AddSocketCommand()
     .WithCompression()
     .WithAESEncryption()
-    .WithCommand("test", async (TestObject o, ISocketManager caller) =>
+    .WithCommand("test", async (ISocketManager caller) =>
     {
-        Console.WriteLine(o.Name);
-        o.Id = 5;
-        o.Name = "Paco";
-        await caller.Send("test", o);
+        Console.WriteLine("test");
     });
 
 var host = builder.Build();

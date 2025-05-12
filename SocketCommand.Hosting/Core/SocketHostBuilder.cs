@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using SocketCommand.Abstractions.Command;
+using SocketCommand.Hosting.Commands;
 using SocketCommand.Abstractions.Interfaces;
 using SocketCommand.Core.Config;
 using SocketCommand.Hosting.Defaults;

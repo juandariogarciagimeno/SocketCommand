@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using SocketCommand.Abstractions.Command;
+using SocketCommand.Hosting.Commands;
 using SocketCommand.Abstractions.Interfaces;
 using System.Linq.Expressions;
 using System.Net.Sockets;
@@ -62,6 +62,25 @@ public sealed class SocketManager : ISocketManager, IDisposable
             await stream.WriteAsync(serializedData, 0, serializedData.Length);
         }
         catch { }
+    }
+
+    public async Task Send(string command)
+    {
+        var h = Encoding.ASCII.GetBytes(command);
+        byte[] serializedData = new byte[8];
+        Array.Copy(h, serializedData, h.Length);
+
+        if (compressor != null)
+        {
+            serializedData = compressor.Compress(serializedData);
+        }
+
+        if (encryptor != null)
+        {
+            serializedData = await encryptor.Encrypt(serializedData);
+        }
+
+        await stream.WriteAsync(serializedData, 0, serializedData.Length);
     }
 
     public async Task<TRes> Send<TReq, TRes>(string command, TReq data)
@@ -176,13 +195,13 @@ public sealed class SocketManager : ISocketManager, IDisposable
             var actionType = handler.Handler.GetType();
             var invoke = actionType.GetMethod("Invoke");
             var commandParameterType = invoke.GetParameters()[0].ParameterType;
-            var parameters = serializer.Deserialize(data, commandParameterType);
+            var parameters = data.Length > 0 ? serializer.Deserialize(data, commandParameterType) : default;
             List<object> arguments = new List<object>();
             foreach (var p in invoke.GetParameters())
             {
                 try
                 {
-                    if (p.ParameterType.IsAssignableTo(parameters.GetType()))
+                    if (p.ParameterType.IsAssignableTo(parameters?.GetType()))
                     {
                         if (handler.Caster == null)
                         {
@@ -225,5 +244,4 @@ public sealed class SocketManager : ISocketManager, IDisposable
         var lambda = Expression.Lambda<Func<object, object>>(converted, param);
         return lambda.Compile();
     }
-
 }
