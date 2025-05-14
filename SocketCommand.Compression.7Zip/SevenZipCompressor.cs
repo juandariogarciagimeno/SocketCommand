@@ -6,6 +6,9 @@ namespace SocketCommand.Compression._7Zip
     {
         public static byte[] CompressLZMA(byte[] data)
         {
+            if (data.Length == 0)
+                throw new ArgumentException("Data is empty.");
+
             using MemoryStream inputStream = new MemoryStream(data);
             using MemoryStream outputStream = new MemoryStream();
 
@@ -26,22 +29,32 @@ namespace SocketCommand.Compression._7Zip
         }
         public static byte[] DecompressLZMA(byte[] data)
         {
-            using MemoryStream inputStream = new MemoryStream(data);
-            using MemoryStream outputStream = new MemoryStream();
+            try
+            {
+                if (data.Length < 13)
+                    throw new ArgumentException("Data is too short to be a valid LZMA compressed stream.");
 
-            SevenZip.Compression.LZMA.Decoder decoder = new SevenZip.Compression.LZMA.Decoder();
+                using MemoryStream inputStream = new MemoryStream(data);
+                using MemoryStream outputStream = new MemoryStream();
 
-            byte[] properties = new byte[5];
-            inputStream.Read(properties, 0, 5);
+                SevenZip.Compression.LZMA.Decoder decoder = new SevenZip.Compression.LZMA.Decoder();
 
-            byte[] fileLengthBytes = new byte[8];
-            inputStream.Read(fileLengthBytes, 0, 8);
-            long fileLength = BitConverter.ToInt64(fileLengthBytes, 0);
+                byte[] properties = new byte[5];
+                inputStream.Read(properties, 0, 5);
 
-            decoder.SetDecoderProperties(properties);
-            decoder.Code(inputStream, outputStream, inputStream.Length, fileLength, null);
+                byte[] fileLengthBytes = new byte[8];
+                inputStream.Read(fileLengthBytes, 0, 8);
+                long fileLength = BitConverter.ToInt64(fileLengthBytes, 0);
 
-            return outputStream.ToArray();
+                decoder.SetDecoderProperties(properties);
+                decoder.Code(inputStream, outputStream, inputStream.Length, fileLength, null);
+
+                return outputStream.ToArray();
+            }
+            catch (DataErrorException)
+            {
+                throw new ArgumentException("Data has invalid format. Probably wasn't compressed");
+            }
         }
 
         private static (CoderPropID[], object[] prop) GetEncoderProperties()

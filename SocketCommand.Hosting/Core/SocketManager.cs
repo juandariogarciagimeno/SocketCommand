@@ -1,51 +1,90 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using SocketCommand.Hosting.Commands;
+using SocketCommand.Hosting.Models;
 using SocketCommand.Abstractions.Interfaces;
 using System.Linq.Expressions;
 using System.Net.Sockets;
 using System.Text;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Threading.Tasks.Dataflow;
 
 namespace SocketCommand.Hosting.Core;
 
 public sealed class SocketManager : ISocketManager, IDisposable
 {
     private static byte[] BOM = [0xEF, 0xBB, 0xBF];
+    private static byte INTERNAL_COMMAND = 0x01;
+    private static byte USER_COMMAND = 0x02;
 
     private readonly TcpClient socket;
     private readonly NetworkStream stream;
-    private readonly StreamReader reader;
     private readonly StreamWriter writer;
     private readonly int bufferSize = 1024;
     private readonly IServiceProvider serviceProvider;
     private readonly ISocketMessageSerializer serializer;
     private readonly ISocketMessageCompressor? compressor;
     private readonly ISocketMessasgeEncryption? encryptor;
+    private readonly IConnectionManager connectionManager;
     private IEnumerable<Command> handlers;
     private IList<Command> synchronousHandlers = [];
     private ManualResetEventSlim syncSemaphore = new();
 
-    public SocketManager(TcpClient socket, IServiceProvider serviceProvider, int bufferSize = 1024)
+    private IList<Command> internalHandlers = [];
+
+    private Guid id;
+
+    public SocketManager(TcpClient socket, IServiceProvider serviceProvider, Guid id, int bufferSize = 1024)
     {
         this.socket = socket;
         this.stream = socket.GetStream();
-        this.reader = new StreamReader(stream, Encoding.UTF8);
         this.writer = new StreamWriter(stream, Encoding.UTF8) { AutoFlush = true };
+        this.id = id;
         this.bufferSize = bufferSize;
         this.serviceProvider = serviceProvider;
+        this.connectionManager = serviceProvider.GetRequiredService<IConnectionManager>();
         this.serializer = serviceProvider.GetRequiredService<ISocketMessageSerializer>();
         this.compressor = serviceProvider.GetService<ISocketMessageCompressor>();
         this.encryptor = serviceProvider.GetService<ISocketMessasgeEncryption>();
         this.handlers = serviceProvider.GetServices<Command>();
+
+        internalHandlers =
+        [
+            new Command()
+            {
+                Name = "disconnect",
+                Handler = () =>
+                {
+                    connectionManager.CloseConnection(this);
+                },
+            },
+        ];
+    }
+
+    public Guid Id => id;
+
+    private byte[] ComputeHeader(string command, bool isinternal = false)
+    {
+        var h = Encoding.ASCII.GetBytes(command);
+        var h2 = id.ToByteArray();
+        byte[] header = new byte[33];
+        Array.Copy(h, header, h.Length);
+        Array.Copy(h2, 0, header, 16, h2.Length);
+        header[32] = isinternal ? INTERNAL_COMMAND : USER_COMMAND;
+        return header;
+    }
+
+    private (string command, Guid id, byte[] body, bool isInternal) ParseHeader(byte[] header)
+    {
+        var command = Encoding.ASCII.GetString(header.Take(16).ToArray()).TrimEnd('\0');
+        var id = new Guid(header.Skip(16).Take(16).ToArray());
+        var isInternal = header[32] == INTERNAL_COMMAND;
+        var body = header.Skip(33).ToArray();
+        return (command, id, body, isInternal);
     }
 
     public async Task Send<T>(string command, T data)
     {
         try
         {
-            var h = Encoding.ASCII.GetBytes(command);
-            byte[] header = new byte[8];
-            Array.Copy(h, header, h.Length);
+            byte[] header = ComputeHeader(command);
 
             var serializedData = serializer.Serialize(data);
             serializedData = header.Concat(serializedData).ToArray();
@@ -66,9 +105,7 @@ public sealed class SocketManager : ISocketManager, IDisposable
 
     public async Task Send(string command)
     {
-        var h = Encoding.ASCII.GetBytes(command);
-        byte[] serializedData = new byte[8];
-        Array.Copy(h, serializedData, h.Length);
+        byte[] serializedData = ComputeHeader(command);
 
         if (compressor != null)
         {
@@ -161,6 +198,21 @@ public sealed class SocketManager : ISocketManager, IDisposable
         }
     }
 
+    internal async Task SendInternal(string command)
+    {
+        byte[] serializedData = ComputeHeader(command, true);
+        if (compressor != null)
+        {
+            serializedData = compressor.Compress(serializedData);
+        }
+        if (encryptor != null)
+        {
+            serializedData = await encryptor.Encrypt(serializedData);
+        }
+
+        await stream.WriteAsync(serializedData, 0, serializedData.Length);
+    }
+
     public async Task<byte[]?> ReceiveAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -170,7 +222,7 @@ public sealed class SocketManager : ISocketManager, IDisposable
             int size = 0;
             do
             {
-                size = await socket.GetStream().ReadAsync(buffer, 0, buffer.Length, cancellationToken);
+                size = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
                 if (size > 0)
                 {
                     data.AddRange(buffer.Take(size));
@@ -217,27 +269,33 @@ public sealed class SocketManager : ISocketManager, IDisposable
             catch (Exception ex)
             {
                 Console.WriteLine($"Error: {ex.Message}");
-                break;
             }
         }
     }
 
     public void HandleMessage(byte[] data)
     {
-        var header = data.Take(8).ToArray();
-        var commandName = Encoding.ASCII.GetString(header).TrimEnd('\0');
-        data = data.Skip(8).ToArray();
+        var (commandName, id, body, isInternal) = ParseHeader(data);
 
-        var handler = synchronousHandlers.FirstOrDefault(x => x.Name == commandName);
-        handler ??= handlers.FirstOrDefault(x => x.Name == commandName);
+        Command? handler = null;
+        if (isInternal)
+        {
+            handler = internalHandlers.FirstOrDefault(x => x.Name == commandName);
+        } else
+        {
+            handler = synchronousHandlers.FirstOrDefault(x => x.Name == commandName);
+            handler ??= handlers.FirstOrDefault(x => x.Name == commandName);
+        }
+
+
         if (handler != null)
         {
+            using var scope = serviceProvider.CreateScope();
             var actionType = handler.Handler.GetType();
-            var invoke = actionType.GetMethod("Invoke");
-            var commandParameterType = invoke.GetParameters()[0].ParameterType;
-            var parameters = data.Length > 0 ? serializer.Deserialize(data, commandParameterType) : default;
+            var commandParameterType = handler.Handler.Method.GetParameters()?.FirstOrDefault()?.ParameterType;
+            var parameters = body.Length > 0 && commandParameterType != null ? serializer.Deserialize(body, commandParameterType) : default;
             List<object> arguments = new List<object>();
-            foreach (var p in invoke.GetParameters())
+            foreach (var p in handler.Handler.Method.GetParameters())
             {
                 try
                 {
@@ -254,22 +312,21 @@ public sealed class SocketManager : ISocketManager, IDisposable
                 }
                 catch 
                 {
-                    arguments.Add(serviceProvider.GetService(p.ParameterType));
+                    arguments.Add(scope.ServiceProvider.GetService(p.ParameterType));
                 }
 
                 if (p.ParameterType.IsAssignableTo(typeof(ISocketManager)))
                 {
-                    var source = new SocketManager(socket, serviceProvider, bufferSize);
-                    arguments.Add(source);
+                    arguments.Add(this);
                 }
             }
 
-            invoke.Invoke(handler.Handler, arguments.ToArray());
+            handler.Handler.DynamicInvoke([.. arguments]);
         }
     }
+
     public void Dispose()
     {
-        reader?.Dispose();
         writer?.Dispose();
         stream?.Dispose();
         socket?.Close();
@@ -277,7 +334,7 @@ public sealed class SocketManager : ISocketManager, IDisposable
         GC.SuppressFinalize(this);
     }
 
-    public static Func<object, object> CreateCaster(Type targetType)
+    private static Func<object, object> CreateCaster(Type targetType)
     {
         var param = Expression.Parameter(typeof(object), "input");
         var converted = Expression.Convert(Expression.Convert(param, targetType), typeof(object));

@@ -11,64 +11,16 @@ public class SocketHost : BackgroundService
 {
     private readonly TcpListener listener;
     private readonly SocketConfiguration config;
-    private readonly List<CancellationTokenSource> connections = [];
-    private readonly IServiceProvider serviceProvider;
+    private readonly Dictionary<Guid, CancellationTokenSource> connections = [];
+    private readonly ConnectionManager connectionManager;
 
-    public SocketHost(IOptions<SocketConfiguration> config, IServiceProvider serviceProvider)
+
+    public SocketHost(IOptions<SocketConfiguration> config, IConnectionManager connectionManager)
     {
         this.config = config.Value;
         this.listener = new TcpListener(System.Net.IPAddress.Any, this.config.Port);
-        this.serviceProvider = serviceProvider;
+        this.connectionManager = (ConnectionManager)connectionManager;
     }
-
-    //public async Task StartAsync(CancellationToken cancellationToken)
-    //{
-    //    try
-    //    {
-    //        listener.Start();
-    //        while (!cancellationToken.IsCancellationRequested)
-    //        {
-    //            try
-    //            {
-    //                var client = await listener.AcceptTcpClientAsync(cancellationToken);
-    //                BeginSocket(client);
-    //            }
-    //            catch (Exception ex)
-    //            {
-    //                Console.WriteLine($"Error accepting client: {ex.Message}");
-    //            }
-    //        }
-    //    }
-    //    finally
-    //    {
-    //        listener.Stop();
-    //    }
-    //}
-
-    internal ISocketManager BeginSocket(TcpClient client)
-    {
-        CancellationTokenSource tokenSource = new ();
-        tokenSource.Token.Register(client.Close);
-        connections.Add(tokenSource);
-        SocketManager s = new SocketManager(client, serviceProvider, config.BufferSize);
-
-        Task.Run(async () =>
-        {
-            await s.Start(tokenSource.Token);
-        }, tokenSource.Token);
-
-        return s;
-    }
-
-    //public async Task StopAsync(CancellationToken cancellationToken)
-    //{
-    //    foreach (var token in connections)
-    //    {
-    //        await token.CancelAsync();
-    //    }
-
-    //    listener?.Stop();
-    //}
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -80,7 +32,7 @@ public class SocketHost : BackgroundService
                 try
                 {
                     var client = await listener.AcceptTcpClientAsync(stoppingToken);
-                    BeginSocket(client);
+                    connectionManager.BeginSocket(client);
                 }
                 catch (Exception ex)
                 {

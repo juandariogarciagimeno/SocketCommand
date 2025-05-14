@@ -2,6 +2,7 @@
 
 public interface ISocketManager
 {
+    public Guid Id { get; }
     public Task Send<T>(string command, T data);
     public Task<TRes> Send<TReq, TRes>(string command, TReq data);
     public Task Send(string command);

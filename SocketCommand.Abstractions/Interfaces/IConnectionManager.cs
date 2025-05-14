@@ -3,6 +3,6 @@
     public interface IConnectionManager
     {
         Task<ISocketManager?> ConnectTo(string address, int port);
-        void CloseConnection(ISocketManager socket);
+        Task CloseConnection(ISocketManager socket);
     }
 }

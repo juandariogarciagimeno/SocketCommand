@@ -1,6 +1,6 @@
-﻿namespace SocketCommand.Hosting.Commands;
+﻿namespace SocketCommand.Hosting.Models;
 
-public sealed class Command
+internal sealed class Command
 {
     public string Name { get; set; }
 

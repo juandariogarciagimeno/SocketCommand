@@ -33,9 +33,19 @@ namespace SocketCommand.Hosting.Defaults
         private Aes OpenAESKey()
         {
             var aesAlg = Aes.Create();
+
+            byte[] key = Convert.FromBase64String(string.IsNullOrEmpty(config?.AESKey) ? DefaultKey : config.AESKey);
+            byte[] iv = Convert.FromBase64String(string.IsNullOrEmpty(config?.AESIV) ? DefaultIV : config.AESIV);
+
+            if (!aesAlg.ValidKeySize((int)(key.Length * 8L)))
+                throw new ArgumentException($"Invalid AES key size: {key.Length * 8L} bits. Valid sizes are: {string.Join(", ", aesAlg.LegalKeySizes.Select(x => x.MaxSize))}");
+
+            if (iv.Length != aesAlg.BlockSize / 8)
+                throw new ArgumentException($"Invalid AES IV size: {iv.Length} bytes. Valid size is: {aesAlg.BlockSize / 8} bytes.");
+
             aesAlg.Mode = CipherMode.CBC;
-            aesAlg.Key = Convert.FromBase64String(string.IsNullOrEmpty(config.AESKey) ? DefaultKey : config.AESKey);
-            aesAlg.IV = Convert.FromBase64String(string.IsNullOrEmpty(config.AESIV) ? DefaultIV : config.AESIV);
+            aesAlg.Key = key;
+            aesAlg.IV = iv;
 
             return aesAlg;
         }

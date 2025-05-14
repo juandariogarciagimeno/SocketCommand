@@ -15,7 +15,7 @@ public sealed class DefaultSocketMessageSerializer : ISocketMessageSerializer
         var attr = type.GetCustomAttributes(typeof(SocketMessageAttribute), true).FirstOrDefault() as SocketMessageAttribute;
 
         if (attr is null)
-            throw new ArgumentNullException(nameof(data), $"Type {type.Name} is not decorated as serializable. Please add the attribute [{nameof(SocketMessageAttribute)}] to your type and [{nameof(OrderAttribute)}] to the properties to serialize.");
+            throw new ArgumentException(nameof(data), $"Type {type.Name} is not decorated as serializable. Please add the attribute [{nameof(SocketMessageAttribute)}] to your type and [{nameof(OrderAttribute)}] to the properties to serialize.");
 
         using var memstr = new MemoryStream(data);
         var reader = new BinaryReader(memstr);
@@ -37,7 +37,7 @@ public sealed class DefaultSocketMessageSerializer : ISocketMessageSerializer
         var attr = type.GetCustomAttributes(typeof(SocketMessageAttribute), true).FirstOrDefault() as SocketMessageAttribute;
 
         if (attr is null)
-            throw new ArgumentNullException(nameof(data), $"Type {type.Name} is not decorated as serializable. Please add the attribute [{nameof(SocketMessageAttribute)}] to your type and [{nameof(OrderAttribute)}] to the properties to serialize.");
+            throw new ArgumentException(nameof(data), $"Type {type.Name} is not decorated as serializable. Please add the attribute [{nameof(SocketMessageAttribute)}] to your type and [{nameof(OrderAttribute)}] to the properties to serialize.");
 
         using var memstr = new MemoryStream();
         var writer = new BinaryWriter(memstr);

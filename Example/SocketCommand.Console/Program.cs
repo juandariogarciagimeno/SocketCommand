@@ -3,17 +3,22 @@ using SocketCommand.Abstractions.Attributes;
 using SocketCommand.Abstractions.Interfaces;
 using SocketCommand.Hosting;
 
-var builder = Host.CreateApplicationBuilder(args);
-builder
-    .AddSocketCommand()
-    .WithCompression()
+var builder = Host.CreateDefaultBuilder(args);
+builder.AddSocketCommand((sb) =>
+{
+    sb
     .WithAESEncryption()
-    .WithCommand("test", async (ISocketManager caller) =>
+    .WithCompression()
+    .WithCommand("ping", async (ISocketManager caller) =>
     {
-        Console.WriteLine("test");
-        var testObj = new TestObject() { Id = 3, Name = "Manolo" };
-        await caller.Send("test", testObj);
+        Console.WriteLine("ping");
+        await caller.Send("ping");
+    })
+    .WithCommand("testdata", async (TestObject o) =>
+    {
+        Console.WriteLine($"Id = {o.Id}, Name = {o.Name}");
     });
+});
 
 var host = builder.Build();
 

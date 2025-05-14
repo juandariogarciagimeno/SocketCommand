@@ -23,8 +23,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SocketCommand.Abstractions\SocketCommand.Abstractions.csproj" />
-    <ProjectReference Include="..\SocketCommand.Hosting\SocketCommand.Hosting.csproj" />
+    <ProjectReference Include="..\..\SocketCommand.Abstractions\SocketCommand.Abstractions.csproj" />
+    <ProjectReference Include="..\..\SocketCommand.Hosting\SocketCommand.Hosting.csproj" />
   </ItemGroup>
 
 </Project>

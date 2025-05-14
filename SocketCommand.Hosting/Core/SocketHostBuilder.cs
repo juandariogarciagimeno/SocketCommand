@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using SocketCommand.Hosting.Commands;
+using SocketCommand.Hosting.Models;
 using SocketCommand.Abstractions.Interfaces;
 using SocketCommand.Core.Config;
 using SocketCommand.Hosting.Defaults;
@@ -11,12 +11,10 @@ namespace SocketCommand.Hosting.Core;
 public sealed class SocketHostBuilder
 {
     private IServiceCollection serviceCollection;
-    private IConfiguration config;
 
     internal SocketHostBuilder(IServiceCollection serviceCollection, IConfiguration config)
     {
         this.serviceCollection = serviceCollection;
-        this.config = config;
 
         serviceCollection.AddSingleton<IServiceProvider>(sp => sp);
         serviceCollection.AddSingleton<IConnectionManager, ConnectionManager>();
