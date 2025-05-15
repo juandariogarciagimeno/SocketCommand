@@ -6,7 +6,7 @@ using System.Text;
 
 namespace SocketCommand.Hosting.Defaults
 {
-    public class DefaultSocketMessageAESEncryption : ISocketMessasgeEncryption
+    public class DefaultSocketMessageAESEncryption : ISocketMessageEncryption
     {
         private static string DefaultKey = "oD6keRx6oCOgpN6hKJ06+CPtbBrySYBfs3ll/fbm8wg=";
         private static string DefaultIV = "pNLMzlkfP0nJvxDylJSOQA==";

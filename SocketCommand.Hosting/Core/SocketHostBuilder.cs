@@ -20,6 +20,7 @@ public sealed class SocketHostBuilder
         serviceCollection.AddSingleton<IConnectionManager, ConnectionManager>();
         serviceCollection.AddSingleton<ISocketMessageSerializer, DefaultSocketMessageSerializer>();
         serviceCollection.AddSingleton<SocketHost>();
+        serviceCollection.AddSingleton<DefaultMessageProcessor>();
 
         serviceCollection.AddHostedService<SocketHost>();
         serviceCollection.Configure<HostOptions>(options =>
@@ -66,15 +67,22 @@ public sealed class SocketHostBuilder
         return this;
     }
 
-    public SocketHostBuilder WithEncryption<TEncryptor>() where TEncryptor : class, ISocketMessasgeEncryption
+    public SocketHostBuilder WithEncryption<TEncryptor>() where TEncryptor : class, ISocketMessageEncryption
     {
-        serviceCollection.AddSingleton<ISocketMessasgeEncryption, TEncryptor>();
+        serviceCollection.AddSingleton<ISocketMessageEncryption, TEncryptor>();
         return this;
     }
 
     public SocketHostBuilder WithAESEncryption()
     {
         return WithEncryption<DefaultSocketMessageAESEncryption>();
+    }
+
+    public SocketHostBuilder WithUdpDiscovery()
+    {
+        serviceCollection.AddSingleton<UdpHost>();
+        serviceCollection.AddHostedService<UdpHost>();
+        return this;
     }
 
 }

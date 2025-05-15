@@ -3,22 +3,18 @@ using Microsoft.Extensions.Options;
 using SocketCommand.Abstractions.Interfaces;
 using SocketCommand.Core.Config;
 using System.Net.Sockets;
-using System.Threading;
 
 namespace SocketCommand.Hosting.Core;
 
 public class SocketHost : BackgroundService
 {
     private readonly TcpListener listener;
-    private readonly SocketConfiguration config;
-    private readonly Dictionary<Guid, CancellationTokenSource> connections = [];
     private readonly ConnectionManager connectionManager;
 
 
     public SocketHost(IOptions<SocketConfiguration> config, IConnectionManager connectionManager)
     {
-        this.config = config.Value;
-        this.listener = new TcpListener(System.Net.IPAddress.Any, this.config.Port);
+        this.listener = new TcpListener(System.Net.IPAddress.Any, config.Value.Port);
         this.connectionManager = (ConnectionManager)connectionManager;
     }
 

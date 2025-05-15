@@ -9,6 +9,7 @@ builder.AddSocketCommand((sb) =>
     sb
     .WithAESEncryption()
     .WithCompression()
+    .WithUdpDiscovery()
     .WithCommand("ping", async (ISocketManager caller) =>
     {
         Console.WriteLine("ping");

@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks.Dataflow;
+using SocketCommand.Hosting.Defaults;
 
 namespace SocketCommand.Hosting.Core;
 
@@ -19,9 +20,8 @@ public sealed class SocketManager : ISocketManager, IDisposable
     private readonly StreamWriter writer;
     private readonly int bufferSize = 1024;
     private readonly IServiceProvider serviceProvider;
+    private readonly DefaultMessageProcessor processor;
     private readonly ISocketMessageSerializer serializer;
-    private readonly ISocketMessageCompressor? compressor;
-    private readonly ISocketMessasgeEncryption? encryptor;
     private readonly IConnectionManager connectionManager;
     private IEnumerable<Command> handlers;
     private IList<Command> synchronousHandlers = [];
@@ -40,9 +40,8 @@ public sealed class SocketManager : ISocketManager, IDisposable
         this.bufferSize = bufferSize;
         this.serviceProvider = serviceProvider;
         this.connectionManager = serviceProvider.GetRequiredService<IConnectionManager>();
+        this.processor = serviceProvider.GetRequiredService<DefaultMessageProcessor>();
         this.serializer = serviceProvider.GetRequiredService<ISocketMessageSerializer>();
-        this.compressor = serviceProvider.GetService<ISocketMessageCompressor>();
-        this.encryptor = serviceProvider.GetService<ISocketMessasgeEncryption>();
         this.handlers = serviceProvider.GetServices<Command>();
 
         internalHandlers =
@@ -88,15 +87,8 @@ public sealed class SocketManager : ISocketManager, IDisposable
 
             var serializedData = serializer.Serialize(data);
             serializedData = header.Concat(serializedData).ToArray();
-            if (compressor != null)
-            {
-                serializedData = compressor.Compress(serializedData);
-            }
 
-            if (encryptor != null)
-            {
-                serializedData = await encryptor.Encrypt(serializedData);
-            }
+            serializedData = await processor.CompressAndEncrypt(serializedData);
 
             await stream.WriteAsync(serializedData, 0, serializedData.Length);
         }
@@ -105,17 +97,7 @@ public sealed class SocketManager : ISocketManager, IDisposable
 
     public async Task Send(string command)
     {
-        byte[] serializedData = ComputeHeader(command);
-
-        if (compressor != null)
-        {
-            serializedData = compressor.Compress(serializedData);
-        }
-
-        if (encryptor != null)
-        {
-            serializedData = await encryptor.Encrypt(serializedData);
-        }
+        byte[] serializedData = await processor.CompressAndEncrypt(ComputeHeader(command));
 
         await stream.WriteAsync(serializedData, 0, serializedData.Length);
     }
@@ -200,15 +182,7 @@ public sealed class SocketManager : ISocketManager, IDisposable
 
     internal async Task SendInternal(string command)
     {
-        byte[] serializedData = ComputeHeader(command, true);
-        if (compressor != null)
-        {
-            serializedData = compressor.Compress(serializedData);
-        }
-        if (encryptor != null)
-        {
-            serializedData = await encryptor.Encrypt(serializedData);
-        }
+        byte[] serializedData = await processor.CompressAndEncrypt(ComputeHeader(command, true));
 
         await stream.WriteAsync(serializedData, 0, serializedData.Length);
     }
@@ -249,15 +223,7 @@ public sealed class SocketManager : ISocketManager, IDisposable
                 if (data.SequenceEqual(BOM))
                     continue;
 
-                if (encryptor != null)
-                {
-                    data = await encryptor.Decrypt(data);
-                }
-
-                if (compressor != null)
-                {
-                    data = compressor.Decompress(data);
-                }
+                data = await processor.DecryptAndDecompress(data);
 
                 if (data == null)
                 {
