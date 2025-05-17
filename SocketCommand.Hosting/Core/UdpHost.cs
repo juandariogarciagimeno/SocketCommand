@@ -32,6 +32,7 @@ internal class UdpHost : BackgroundService
     /// </summary>
     /// <param name="config">Socket Configuration.</param>
     /// <param name="sp">Service Provider.</param>
+    /// <param name="logger">Logger.</param>
     public UdpHost(IOptions<SocketConfiguration> config, IServiceProvider sp, ILogger<UdpHost> logger)
     {
         this.config = config.Value;
@@ -59,7 +60,7 @@ internal class UdpHost : BackgroundService
         try
         {
             UdpReceiveResult remoteEP;
-            logger.LogInformation("Starting UDP Listener on port: {port}", ((IPEndPoint?)udpServer?.Client?.LocalEndPoint)?.Port ?? 0);
+            logger.LogInformation("Starting UDP Listener on port: {port}", ((IPEndPoint?)udpServer.Client?.LocalEndPoint)?.Port ?? 0);
             while (!stoppingToken.IsCancellationRequested)
             {
                 remoteEP = await udpServer.ReceiveAsync(stoppingToken);

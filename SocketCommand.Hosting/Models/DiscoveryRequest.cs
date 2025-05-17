@@ -14,7 +14,6 @@ using SocketCommand.Abstractions.Attributes;
 [SocketMessage]
 internal class DiscoveryRequest
 {
-
     /// <summary>
     /// Gets or sets the SecretKey to exchange with the server.
     /// </summary>

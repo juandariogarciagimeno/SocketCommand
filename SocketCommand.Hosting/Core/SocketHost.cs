@@ -28,6 +28,7 @@ public class SocketHost : BackgroundService
     /// </summary>
     /// <param name="config">Socket Configuration.</param>
     /// <param name="connectionManager">Connection Manager.</param>
+    /// <param name="logger">Logger.</param>
     public SocketHost(IOptions<SocketConfiguration> config, IConnectionManager connectionManager, ILogger<SocketHost> logger)
     {
         this.listener = new TcpListener(System.Net.IPAddress.Any, config.Value.Port);
