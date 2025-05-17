@@ -1,9 +1,38 @@
-﻿namespace SocketCommand.Abstractions.Interfaces
+﻿// --------------------------------------------------------------------------------------------------
+// <copyright file="IConnectionManager.cs" company="juandariogg">
+// Licensed under the MIT license. See LICENSE file in the samples root for full license information.
+// </copyright>
+// --------------------------------------------------------------------------------------------------
+
+namespace SocketCommand.Abstractions.Interfaces;
+
+using SocketCommand.Abstractions.Models;
+
+/// <summary>
+/// Connection Manager for TCP Connections and UDP discovery.
+/// </summary>
+public interface IConnectionManager
 {
-    public interface IConnectionManager
-    {
-        Task<ISocketManager?> ConnectTo(string address, int port);
-        Task CloseConnection(ISocketManager socket);
-        Task<List<DiscoveryResult>> Discover(int? port = null, TimeSpan? timeout = null);
-    }
+    /// <summary>
+    /// Connects to a remote socket.
+    /// </summary>
+    /// <param name="address">Address to connect to.</param>
+    /// <param name="port">Port to  connect to.</param>
+    /// <returns>A <see cref="ISocketManager"/> with the stablished connection.</returns>
+    Task<ISocketManager?> ConnectTo(string address, int port);
+
+    /// <summary>
+    /// Closes the specified connection and communicates to the connected peer the closing.
+    /// </summary>
+    /// <param name="socket">Connection to close.</param>
+    /// <returns>A <see cref="Task"/>.</returns>
+    Task CloseConnection(ISocketManager socket);
+
+    /// <summary>
+    /// Discovers UDP Servers sharing the configured secret key.
+    /// </summary>
+    /// <param name="port">Port to scan.</param>
+    /// <param name="timeout">Timeout to complete the scan.</param>
+    /// <returns>A List of <see cref="DiscoveryResult"/>.</returns>
+    Task<List<DiscoveryResult>> Discover(int? port = null, TimeSpan? timeout = null);
 }

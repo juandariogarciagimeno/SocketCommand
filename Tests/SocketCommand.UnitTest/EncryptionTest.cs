@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Options;
 using Moq;
-using SocketCommand.Core.Config;
+using SocketCommand.Hosting.Config;
 using SocketCommand.Hosting.Defaults;
 using System.Text;
 

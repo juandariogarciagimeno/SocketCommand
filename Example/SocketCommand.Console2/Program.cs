@@ -1,12 +1,13 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using SocketCommand.Abstractions.Attributes;
 using SocketCommand.Abstractions.Interfaces;
 using SocketCommand.Hosting;
+using SocketCommand.Abstractions.Attributes;
+using SocketCommand.Compression._7Zip;
 
 var builder = Host.CreateApplicationBuilder(args);
 builder.AddSocketCommand()
-    .WithCompression()
+    .With7ZipCompression()
     .WithAESEncryption()
     .WithCommand("ping", async (ISocketManager caller) =>
     {

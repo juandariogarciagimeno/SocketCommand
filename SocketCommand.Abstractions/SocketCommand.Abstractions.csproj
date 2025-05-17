@@ -18,12 +18,23 @@
     <PackageTags>socket;networking;commands;communication;tcp;udp</PackageTags>
     <OutputPath>$(SolutionDir)\nupkgs\</OutputPath>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <CodeAnalysisRuleSet>..\stylecop.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
 
   <ItemGroup>
     <None Include="..\README.md" Pack="true" PackagePath="\" Visible="false" />
     <None Include="..\LICENSE.txt" Pack="true" PackagePath="\" Visible="false" />
     <None Include="..\favicon.png" Pack="true" PackagePath="\" Visible="false" />
+    <AdditionalFiles Include="..\stylecop.json" Pack="false" Visible="false"/>
+    <None Include="..\stylecop.ruleset" Pack="false" Visible="false"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.4" />
+    <PackageReference Include="StyleCop.Analyzers" Version="1.1.118">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
 </Project>

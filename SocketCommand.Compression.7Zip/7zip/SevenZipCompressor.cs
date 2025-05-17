@@ -60,14 +60,14 @@ namespace SocketCommand.Compression._7Zip
         private static (CoderPropID[], object[] prop) GetEncoderProperties()
         {
             bool eos = false;
-            Int32 dictionary = 1 << 21;
-            Int32 posStateBits = 2;
-            Int32 litContextBits = 3; // for normal files
-                                      // UInt32 litContextBits = 0; // for 32-bit data
-            Int32 litPosBits = 0;
+            int dictionary = 1 << 21;
+            int posStateBits = 2;
+            int litContextBits = 3; // for normal files
+                                    // UInt32 litContextBits = 0; // for 32-bit data
+            int litPosBits = 0;
             // UInt32 litPosBits = 2; // for 32-bit data
-            Int32 algorithm = 2;
-            Int32 numFastBytes = 128;
+            int algorithm = 2;
+            int numFastBytes = 128;
             string mf = "bt4";
 
            CoderPropID[] propIDs = new CoderPropID[]

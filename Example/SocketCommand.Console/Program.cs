@@ -1,14 +1,15 @@
 ﻿using Microsoft.Extensions.Hosting;
-using SocketCommand.Abstractions.Attributes;
 using SocketCommand.Abstractions.Interfaces;
 using SocketCommand.Hosting;
+using SocketCommand.Abstractions.Attributes;
+using SocketCommand.Compression._7Zip;
 
 var builder = Host.CreateDefaultBuilder(args);
 builder.AddSocketCommand((sb) =>
 {
     sb
     .WithAESEncryption()
-    .WithCompression()
+    .With7ZipCompression()
     .WithUdpDiscovery()
     .WithCommand("ping", async (ISocketManager caller) =>
     {

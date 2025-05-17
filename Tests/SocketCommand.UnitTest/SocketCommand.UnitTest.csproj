@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\SocketCommand.Compression.7Zip\SocketCommand.Compression.7Zip.csproj" />
     <ProjectReference Include="..\..\SocketCommand.Hosting\SocketCommand.Hosting.csproj" />
   </ItemGroup>
 

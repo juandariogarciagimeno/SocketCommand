@@ -1,4 +1,4 @@
-﻿namespace SocketCommand.Abstractions
+﻿namespace SocketCommand.Abstractions.Models
 {
     public class DiscoveryResult
     {
