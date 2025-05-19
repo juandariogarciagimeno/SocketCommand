@@ -32,7 +32,7 @@ public static class DependencyContainer
     /// <param name="builder">Host Builder.</param>
     /// <param name="configure">Delegate to configure the SocketHostBuilder.</param>
     /// <returns>The Host Builder.</returns>
-    public static IHostBuilder AddSocketCommand(this IHostBuilder builder, Action<SocketHostBuilder> configure)
+    public static IHostBuilder AddSocketCommand(this IHostBuilder builder, Action<ISocketHostBuilder> configure)
     {
         builder.ConfigureServices((context, services) =>
         {
