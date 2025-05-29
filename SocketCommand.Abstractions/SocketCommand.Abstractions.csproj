@@ -8,17 +8,20 @@
 
   <PropertyGroup>
     <PackageId>SocketCommand.Abstractions</PackageId>
-    <Version>1.0.1</Version>
+    <Version>1.0.7-alpha-0.1</Version>
     <Authors>juandariogg</Authors>
     <Description>Abstractions and attribtues for socket command implementation.</Description>
     <PackageIcon>favicon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     <PackageProjectUrl>https://github.com/juandariogarciagimeno/SocketCommand</PackageProjectUrl>
-    <PackageTags>socket;networking;commands;communication;tcp;udp</PackageTags>
     <OutputPath>$(SolutionDir)\nupkgs\</OutputPath>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageTags>socket;networking;commands;communication;tcp;udp</PackageTags>
     <CodeAnalysisRuleSet>..\stylecop.ruleset</CodeAnalysisRuleSet>
+    <IncludeSymbols>true</IncludeSymbols>
+    <IncludeSource>true</IncludeSource>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <ItemGroup>

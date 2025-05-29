@@ -14,6 +14,18 @@ using SocketCommand.Abstractions.Models;
 public interface IConnectionManager
 {
     /// <summary>
+    /// Gets a list of active connections.
+    /// </summary>
+    IReadOnlyCollection<ISocketManager> Connections { get; }
+
+    /// <summary>
+    /// Gets a connection by id.
+    /// </summary>
+    /// <param name="id">ID of the connection.</param>
+    /// <returns>The ISocketManager.</returns>
+    ISocketManager GetById(Guid id);
+
+    /// <summary>
     /// Connects to a remote socket.
     /// </summary>
     /// <param name="address">Address to connect to.</param>

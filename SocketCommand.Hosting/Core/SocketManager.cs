@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 using SocketCommand.Hosting.Models;
 using SocketCommand.Abstractions.Interfaces;
+using SocketCommand.Hosting.Config;
 
 /// <summary>
 /// SocketManager is a class that manages the socket connection and message processing.
@@ -44,22 +45,28 @@ public sealed class SocketManager : ISocketManager, IDisposable
 
     private readonly Guid id;
 
+    private readonly int keepAlivePeriod = 30000;
+    private readonly int keepAliveThreshold = 10;
+    private int keepAliveFailedCount = 0;
+    private Timer _keepAliveTimer;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="SocketManager"/> class.
     /// </summary>
     /// <param name="socket">TCP Socket Connection.</param>
     /// <param name="serviceProvider">Service Provider.</param>
     /// <param name="id">Id of the connection.</param>
-    /// <param name="bufferSize">Default buffersize for messages.</param>
-    /// <param name="timeout">Defult timeout for synchronous commands.</param>
-    public SocketManager(TcpClient socket, IServiceProvider serviceProvider, Guid id, int bufferSize = 1024, int timeout = 5000)
+    /// <param name="config">Socket Configuration.</param>
+    public SocketManager(TcpClient socket, IServiceProvider serviceProvider, Guid id, SocketConfiguration config)
     {
         this.socket = socket;
         this.stream = socket.GetStream();
         this.writer = new StreamWriter(stream, Encoding.UTF8) { AutoFlush = true };
         this.id = id;
-        this.bufferSize = bufferSize;
-        this.timeout = timeout;
+        this.bufferSize = config.BufferSize;
+        this.timeout = config.Timeout;
+        this.keepAliveThreshold = config.KeepAliveThreshold;
+        this.keepAlivePeriod = config.KeepAlivePeriod;
         this.serviceProvider = serviceProvider;
         this.connectionManager = serviceProvider.GetRequiredService<IConnectionManager>();
         this.processor = serviceProvider.GetRequiredService<DefaultMessageProcessor>();
@@ -77,6 +84,14 @@ public sealed class SocketManager : ISocketManager, IDisposable
                     connectionManager.CloseConnection(this);
                 },
             },
+            new Command()
+            {
+                Name = "keepalive",
+                Handler = () =>
+                {
+                    Interlocked.Exchange(ref keepAliveFailedCount, 0);
+                },
+            },
         ];
     }
 
@@ -90,6 +105,7 @@ public sealed class SocketManager : ISocketManager, IDisposable
     /// </summary>
     public void Dispose()
     {
+        _keepAliveTimer?.Dispose();
         syncSemaphore?.Dispose();
         writer?.Dispose();
         stream?.Dispose();
@@ -283,6 +299,12 @@ public sealed class SocketManager : ISocketManager, IDisposable
     /// <returns>A <see cref="Task"/>.</returns>
     internal async Task Start(CancellationToken token = default)
     {
+        BeginKeepAlive(token);
+        await MainLoop(token);
+    }
+
+    private async Task MainLoop(CancellationToken token = default)
+    {
         while (!token.IsCancellationRequested)
         {
             try
@@ -312,6 +334,42 @@ public sealed class SocketManager : ISocketManager, IDisposable
                 Console.WriteLine($"Error: {ex.Message}");
             }
         }
+    }
+
+    private void BeginKeepAlive(CancellationToken token = default)
+    {
+        _keepAliveTimer = new Timer(
+            state =>
+            {
+                _ = Task.Run(
+                    async () =>
+                    {
+                        if (token.IsCancellationRequested || !socket.Connected)
+                        {
+                            return;
+                        }
+
+                        try
+                        {
+                            if (Interlocked.Increment(ref keepAliveFailedCount) > keepAliveThreshold)
+                            {
+                                logger.LogWarning("Keepalive failed too many times, disconnecting.");
+                                await connectionManager.CloseConnection(this);
+                                _keepAliveTimer?.Dispose();
+                                return;
+                            }
+
+                            await SendInternal("keepalive");
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogError(ex, "Error sending keepalive message.");
+                        }
+                    });
+            },
+            null,
+            TimeSpan.Zero,
+            TimeSpan.FromMilliseconds(keepAlivePeriod));
     }
 
     /// <summary>
@@ -350,20 +408,24 @@ public sealed class SocketManager : ISocketManager, IDisposable
 
                         var casted = handler.Caster(parameters);
                         arguments.Add(casted);
+                        continue;
                     }
                 }
                 catch
                 {
-                    var service = scope.ServiceProvider.GetService(p.ParameterType);
-                    if (service != null)
-                    {
-                        arguments.Add(service);
-                    }
+                }
+
+                var service = scope.ServiceProvider.GetService(p.ParameterType);
+                if (service != null)
+                {
+                    arguments.Add(service);
+                    continue;
                 }
 
                 if (p.ParameterType.IsAssignableTo(typeof(ISocketManager)))
                 {
                     arguments.Add(this);
+                    continue;
                 }
             }
 

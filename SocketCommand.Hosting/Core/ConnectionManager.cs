@@ -43,6 +43,26 @@ internal class ConnectionManager : IConnectionManager
     }
 
     /// <summary>
+    /// Gets a list of active connections.
+    /// </summary>
+    public IReadOnlyCollection<ISocketManager> Connections => this.connections.Values.Select(c => c.Socket).ToList();
+
+    /// <summary>
+    /// Gets a connection by id.
+    /// </summary>
+    /// <param name="id">ID of the connection.</param>
+    /// <returns>The ISocketManager.</returns>
+    public ISocketManager GetById(Guid id)
+    {
+        if (this.connections.TryGetValue(id, out var conn))
+        {
+            return conn.Socket;
+        }
+
+        throw new KeyNotFoundException($"Connection with id {id} not found.");
+    }
+
+    /// <summary>
     /// Closes the specified connection and communicates to the connected peer the closing.
     /// </summary>
     /// <param name="socket">Connection to close.</param>
@@ -152,7 +172,7 @@ internal class ConnectionManager : IConnectionManager
     {
         Guid id = Guid.NewGuid();
         CancellationTokenSource tokenSource = new CancellationTokenSource();
-        SocketManager s = new SocketManager(client, serviceProvider, id, config.BufferSize, config.Timeout);
+        SocketManager s = new SocketManager(client, serviceProvider, id, config);
         connections.Add(id, new Connection(s, tokenSource));
         tokenSource.Token.Register(s.Dispose);
 

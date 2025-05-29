@@ -27,6 +27,16 @@ public class SocketConfiguration
     public int Timeout { get; set; } = 5000;
 
     /// <summary>
+    /// Gets or sets the period (in miliseconds) to send keep alive messages. Default value is 30 seconds.
+    /// </summary>
+    public int KeepAlivePeriod { get; set; } = 30000;
+
+    /// <summary>
+    /// Gets or sets the threshold (in number of messages) to send a keep alive message. Default value is 10 messages.
+    /// </summary>
+    public int KeepAliveThreshold { get; set; } = 10;
+
+    /// <summary>
     /// Gets or sets the secret key for UDP connection.
     /// </summary>
     public string UdpSecret { get; set; } = "s3cr3t!";
