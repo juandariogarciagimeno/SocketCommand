@@ -8,7 +8,7 @@
 
   <PropertyGroup>
     <PackageId>SocketCommand.Abstractions</PackageId>
-    <Version>1.0.7-alpha-0.1</Version>
+    <Version>1.0.7</Version>
     <Authors>juandariogg</Authors>
     <Description>Abstractions and attribtues for socket command implementation.</Description>
     <PackageIcon>favicon.png</PackageIcon>
